@@ -9,8 +9,8 @@
 # Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
 # Short-Description: Simple RTSP Server Script
-# Description: Inicia Simple RTSP Server Script, deve ser localizado dentro da pasta do software
-# rtsp-simple-server, na pasta scripts
+# Description: Inicia Simple RTSP Server Script, este script deve estar
+# na mesma pasta do executavel do software rtsp-simple-server.
 ### END INIT INFO
 
 # Nome do Serviço
@@ -18,12 +18,12 @@ SERVERNAME="RTSP SIMPLE SERVER"
 # Nome do serviço
 SERVICE="rtsp"
 # Pasta do servidor
-RSTPPATH="/dados/rtsp"
+PASTA="/dados/rtsp"
 # Nome Sessáo Screen
 SCRNAME="screen-rtsp"
 ## Comando do java para executar o minecraft!
 
-EXECUTAR="rtsp-simple-server"
+EXECUTAR="./rtsp-simple-server"
 
 # Verificar se o servidor esta rodando e informar o ID do processo
 verifica() {
@@ -53,7 +53,7 @@ rtsp_start() {
     exit 1
   else
     echo " * $SERVERNAME não está rodando. Iniciando..."
-    cd $RTSPPATH/ && screen -c /dev/null -dmS $SCRNAME $EXECUTAR
+    cd $PASTA && screen -c /dev/null -dmS $SCRNAME $EXECUTAR
     echo " * Verificando se $SERVERNAME está rodando..."
 
     # Checando se servidor esta rodando por 3 segundos
@@ -79,7 +79,7 @@ rtsp_stop() {
   then
     echo " * $SERVERNAME está rodadndo com ID (pid $RTSPPID). Iniciando o desligamento..."
     echo -n " * Parando $SERVERNAME"
-    screen -p 0 -S $SCRNAME -X eval 'stuff \"stop\"\015'
+    screen -p 0 -S $SCRNAME -X stuff '^C'
 
     # Checando se servidor esta rodando por 15 segundos
     COUNT=0
@@ -115,7 +115,7 @@ rtsp_status() {
 }
 
 ## Conectar ao console do minecraft "Sessão do Screen", para desconectar use Ctrl+a então d
-mc_console() {
+rtsp_console() {
   if verifica
   then
      screen -S $SCRNAME -dr
