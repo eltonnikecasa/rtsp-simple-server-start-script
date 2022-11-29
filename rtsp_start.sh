@@ -15,58 +15,29 @@
 
 # Nome do Serviço
 SERVERNAME="RTSP SIMPLE SERVEr"
-# Executavel
-SERVICE="rtsp-simple-server"
+# Nome do serviço
+SERVICE="rtsp"
 # Nome de usuario para rodar
 USERNAME="administrador"
 # Pasta do servidor
 RSTPPATH="/dados/rtsp"
 # Nome Sessáo Screen
-SCRNAME="rtsp"
-
-## Rodar todos os comando como usuario especifico
-as_user() {  ME="$(whoami)"
-  if [ "$ME" == "$USERNAME" ]
-  then
-    bash -c "$1"
-  else
-    su - "$USERNAME" -c "$1"
-  fi
-}
-
-verifica() {
-#  verifica se o simple rtsp está sendo executado
-  dataok=`date`
-  
-  if pgrep "rtsp" > /dev/null
-  then
-    return 1
-    dataok=`date`
-    echo "$dataok = OK" >> $RSTPPATH/logs/reboot.log
-  else
-    return 0
-    echo "$dataok = REBOOT" >> $RSTPPATH/logs/reboot.log
-    $RSTPPATH/scripts/rtsp_start restart
-fi
-}
+SCRNAME="screen-rtsp"
 
 ## Verificar se o servidor esta rodando e informar o ID do processo
 verifica() {
-  # Pegar data para registrar no log:
-  DATENOW=`date`
   # Pegar o ID do processo "Screen":
   SCREENPID=""
   SCREENPID="$(ps -ef | grep -v grep | grep -i screen | grep $SCRNAME | awk '{print $2}')"
 
   if [ -z "$SCREENPID" ]
   then
-   echo "$dataok = OK" >> $RSTPPATH/logs/reboot.log
    return 1
   fi
 
-  JAVAPID="$(ps -f --ppid $SCREENPID | grep $SERVICE | awk '{print $2}')"
+  RTSPPID="$(ps -f --ppid $SCREENPID | grep $SERVICE | awk '{print $2}')"
 
-  if [ -z "$JAVAPID" ]
+  if [ -z "$RTSPPID" ]
   then
     return 1
   fi
@@ -77,20 +48,18 @@ verifica() {
 rtsp_start() {
   if verifica
   then
-    echo " * [ERRO] $SERVERNAME esta rodando com processo (pid $JAVAPID). Não iniciar!"
+    echo " * [ERRO] $SERVERNAME esta rodando com processo (pid $RTSPPID). Não iniciar!"
     exit 1
   else
     echo " * $SERVERNAME não está rodando. Iniciando..."
-    echo " * Usuando mapa \"$WORLDNAME\"..."
-    as_user "cd \"$RSTPPATH\" && screen -c /dev/null -dmS $SCRNAME $EXECUTAR"
     echo " * Verificando se $SERVERNAME está rodando..."
 
     # Checando se servidor esta rodando por 15 segundos
     COUNT=0
     while [ $COUNT -lt 15 ]; do
-      if server_running
+      if verifica
       then
-        echo " * [OK] $SERVERNAME agora está rodando com ID: (pid $JAVAPID)."
+        echo " * [OK] $SERVERNAME agora está rodando com ID: (pid $RTSPPID)."
 	exit 0
       else
         let COUNT=COUNT+1
@@ -103,37 +72,17 @@ rtsp_start() {
   fi
 }
 
-mc_stop() {
-  if server_running
+rtsp_stop() {
+  if verifica
   then
-    echo " * $SERVERNAME está rodadndo com ID (pid $JAVAPID). Iniciando o desligamento..."
-    echo " * Avisando usuarios que o servidor está fechando..."
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"broadcast SERVIDOR ESTÁ REINICIANDO\"\015'"
-    as_user "screen -p 0 -S $SCRNAME -X eval 'itens \"save-all\"\015'"
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"broadcast SERVIDOR VOLTARA EM 1 MINUTO\"\015'"
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"broadcast MELHORANDO SERVIDOR PARA VOCÊS\"\015'"
-    # começando contador de 20 segundos para verificar se o servidor fechou
-    COUNT=0
-    while [ $COUNT -lt 10 ]; do
-      echo -n "."
-      sleep 2
-      if [ -f "$RSTPPATH/logs/latest.log" ]
-      then
-        if [[ "$(tail -n 20 $RSTPPATH/logs/latest.log | grep -E 'Save complete|Saved the world' | wc -l)" -gt 0 ]]; then
-          COUNT=99
-        fi
-      fi
-      let COUNT=COUNT+1
-    done
-    echo ""
-
+    echo " * $SERVERNAME está rodadndo com ID (pid $RTSPPID). Iniciando o desligamento..."
     echo -n " * Parando $SERVERNAME"
     as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"stop\"\015'"
 
     # Checando se servidor esta rodando por 15 segundos
     COUNT=0
     while [ $COUNT -lt 15 ]; do
-      if server_running
+      if verifica
       then
         echo -n "."
         let COUNT=COUNT+1
@@ -146,7 +95,7 @@ mc_stop() {
     done
     echo ""
     # servidor não fechou
-    echo " * [ERROR] $SERVERNAME ainda está rodando com ID: (pid $JAVAPID). Não foi possivel fechar!"
+    echo " * [ERROR] $SERVERNAME ainda está rodando com ID: (pid $RTSPPID). Não foi possivel fechar!"
     exit 1
   else
     echo " * [OK] $SERVERNAME fechou corretamente."
@@ -154,9 +103,9 @@ mc_stop() {
 }
 
 rtsp_status() {
-  if server_running
+  if verifica
   then
-    echo " * $SERVERNAME status: Rodando (pid $JAVAPID)."
+    echo " * $SERVERNAME status: Rodando (pid $RTSPPID)."
   else
     echo " * $SERVERNAME status: Não está rodando."
     exit 1
@@ -165,7 +114,7 @@ rtsp_status() {
 
 ## Conectar ao console do minecraft "Sessão do Screen", para desconectar use Ctrl+a então d
 mc_console() {
-  if server_running
+  if verifica
   then
     as_user "screen -S $SCRNAME -dr"
   else
@@ -178,25 +127,25 @@ mc_console() {
 
 case "$1" in
   start)
- mc_start
+ rtsp_start
  ;;
   verificar)
  verifica
  ;;
   stop)
- mc_stop
+ rtsp_stop
  ;;
   restart)
- mc_stop
+ rtsp_stop
  sleep 5
- mc_start
- mc_console
+ rtsp_start
+ rtsp_console
  ;;
   status)
- mc_status
+ rtsp_status
  ;;
   console)
- mc_console
+ rtsp_console
  ;;
  *)
  echo " * Uso: rtsp_start {start|stop|restart|status|console}"
