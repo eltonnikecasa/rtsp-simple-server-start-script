@@ -14,17 +14,18 @@
 ### END INIT INFO
 
 # Nome do Serviço
-SERVERNAME="RTSP SIMPLE SERVEr"
+SERVERNAME="RTSP SIMPLE SERVER"
 # Nome do serviço
 SERVICE="rtsp"
-# Nome de usuario para rodar
-USERNAME="administrador"
 # Pasta do servidor
 RSTPPATH="/dados/rtsp"
 # Nome Sessáo Screen
 SCRNAME="screen-rtsp"
+## Comando do java para executar o minecraft!
 
-## Verificar se o servidor esta rodando e informar o ID do processo
+EXECUTAR="rtsp-simple-server"
+
+# Verificar se o servidor esta rodando e informar o ID do processo
 verifica() {
   # Pegar o ID do processo "Screen":
   SCREENPID=""
@@ -35,7 +36,7 @@ verifica() {
    return 1
   fi
 
-  RTSPPID="$(ps -f --ppid $SCREENPID | grep $SERVICE | awk '{print $2}')"
+  RTSPPID="$(ps -f --pid $SCREENPID | grep $SERVICE | awk '{print $2}')"
 
   if [ -z "$RTSPPID" ]
   then
@@ -52,11 +53,12 @@ rtsp_start() {
     exit 1
   else
     echo " * $SERVERNAME não está rodando. Iniciando..."
+    cd $RTSPPATH/ && screen -c /dev/null -dmS $SCRNAME $EXECUTAR
     echo " * Verificando se $SERVERNAME está rodando..."
 
-    # Checando se servidor esta rodando por 15 segundos
+    # Checando se servidor esta rodando por 3 segundos
     COUNT=0
-    while [ $COUNT -lt 15 ]; do
+    while [ $COUNT -lt 3 ]; do
       if verifica
       then
         echo " * [OK] $SERVERNAME agora está rodando com ID: (pid $RTSPPID)."
@@ -77,7 +79,7 @@ rtsp_stop() {
   then
     echo " * $SERVERNAME está rodadndo com ID (pid $RTSPPID). Iniciando o desligamento..."
     echo -n " * Parando $SERVERNAME"
-    as_user "screen -p 0 -S $SCRNAME -X eval 'stuff \"stop\"\015'"
+    screen -p 0 -S $SCRNAME -X eval 'stuff \"stop\"\015'
 
     # Checando se servidor esta rodando por 15 segundos
     COUNT=0
@@ -116,7 +118,7 @@ rtsp_status() {
 mc_console() {
   if verifica
   then
-    as_user "screen -S $SCRNAME -dr"
+     screen -S $SCRNAME -dr
   else
     echo " * [ERRO] $SERVERNAME não está rodando! Impossivel conectar ao console."
     exit 1
@@ -154,3 +156,4 @@ case "$1" in
 esac
 
 exit 0
+
